@@ -1,0 +1,14 @@
+{
+  "name": "link-shortener-shared",
+  "version": "1.0.0",
+  "description": "Shared utilities and dependencies for Link Shortener Lambda functions",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.496.0",
+    "@aws-sdk/lib-dynamodb": "^3.496.0",
+    "@aws-sdk/util-dynamodb": "^3.496.0",
+    "nanoid": "^3.3.7",
+    "ua-parser-js": "^1.0.37",
+    "zod": "^3.22.4"
+  }
+}

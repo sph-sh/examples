@@ -1,0 +1,44 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm up"
+    - duration: 120
+      arrivalRate: 10
+      name: "Ramp up load"
+    - duration: 300
+      arrivalRate: 15
+      name: "Sustained load"
+  defaults:
+    headers:
+      User-Agent: "Artillery Load Test"
+
+scenarios:
+  - name: "Create and redirect links"
+    weight: 70
+    flow:
+      - post:
+          url: "/api/shorten"
+          headers:
+            Content-Type: "application/json"
+          json:
+            url: "https://example.com/test-url-{{ $randomString() }}"
+          capture:
+            - json: "$.data.shortCode"
+              as: "shortCode"
+      - get:
+          url: "/{{ shortCode }}"
+          followRedirects: false
+
+  - name: "Health check"
+    weight: 10
+    flow:
+      - get:
+          url: "/api/health"
+
+  - name: "Analytics check"
+    weight: 20
+    flow:
+      - get:
+          url: "/api/analytics/github"

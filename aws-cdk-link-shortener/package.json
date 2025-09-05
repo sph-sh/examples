@@ -1,0 +1,84 @@
+{
+  "name": "aws-cdk-link-shortener",
+  "version": "1.0.0",
+  "description": "Production-grade link shortener service built with AWS CDK, Node.js Lambda, and DynamoDB",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:integration": "jest --config jest.integration.config.js",
+    "test:e2e": "jest --config jest.e2e.config.js",
+    "test:load": "artillery run tests/load/redirect-test.yml",
+    "cdk": "cdk",
+    "dev": "concurrently \"npm run watch\" \"npm run dev:server\"",
+    "dev:server": "nodemon local/server.ts",
+    "install:dynamodb-local": "npm install dynamodb-local",
+    "setup:local": "ts-node local/setup-dynamodb.ts",
+    "deploy:dev": "cdk deploy --all --profile dev --require-approval never",
+    "deploy:prod": "cdk deploy --all --profile prod --require-approval never",
+    "deploy:destroy": "cdk destroy --all",
+    "logs:follow": "aws logs tail /aws/lambda/LinkShortener-Redirect --follow",
+    "metrics:dashboard": "open https://console.aws.amazon.com/cloudwatch/home#dashboards:name=LinkShortener",
+    "costs:analyze": "aws ce get-cost-and-usage --time-period Start=2024-01-01,End=2024-01-31 --granularity MONTHLY --metrics BlendedCost --group-by Type=DIMENSION,Key=SERVICE"
+  },
+  "keywords": [
+    "aws",
+    "cdk",
+    "lambda",
+    "dynamodb",
+    "link-shortener",
+    "url-shortener",
+    "serverless",
+    "production",
+    "typescript"
+  ],
+  "author": "SPH - Software Project Hub",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.136",
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.11",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20.11.16",
+    "@types/uuid": "^9.0.8",
+    "@typescript-eslint/eslint-plugin": "^6.20.0",
+    "@typescript-eslint/parser": "^6.20.0",
+    "artillery": "^2.0.5",
+    "aws-cdk": "2.125.0",
+    "concurrently": "^8.2.2",
+    "eslint": "^8.56.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.3",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.3.3"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.496.0",
+    "@aws-sdk/client-sqs": "^3.496.0",
+    "@aws-sdk/lib-dynamodb": "^3.496.0",
+    "@aws-sdk/util-dynamodb": "^3.496.0",
+    "aws-cdk-lib": "2.125.0",
+    "constructs": "^10.3.0",
+    "dotenv": "^16.4.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "nanoid": "^3.3.7",
+    "ua-parser-js": "^1.0.37",
+    "uuid": "^9.0.1",
+    "zod": "^3.22.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/aws-cdk-link-shortener.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/aws-cdk-link-shortener/issues"
+  },
+  "homepage": "https://sph.sh/en/series/aws-cdk-link-shortener"
+}

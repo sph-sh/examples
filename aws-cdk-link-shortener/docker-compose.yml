@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # DynamoDB Local for development
+  dynamodb-local:
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    image: "amazon/dynamodb-local:latest"
+    container_name: linkshortener-dynamodb-local
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./local/dynamodb-data:/home/dynamodblocal/data"
+    working_dir: /home/dynamodblocal
+    networks:
+      - linkshortener-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/shell/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # DynamoDB Admin UI (optional)
+  dynamodb-admin:
+    image: "aaronshaf/dynamodb-admin:latest"
+    container_name: linkshortener-dynamodb-admin
+    ports:
+      - "8001:8001"
+    environment:
+      DYNAMO_ENDPOINT: http://dynamodb-local:8000
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+    depends_on:
+      dynamodb-local:
+        condition: service_healthy
+    networks:
+      - linkshortener-network
+
+  # Redis for rate limiting and caching (optional)
+  redis:
+    image: "redis:7-alpine"
+    container_name: linkshortener-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - linkshortener-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # Application development server
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: linkshortener-app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ".:/app"
+      - "/app/node_modules"
+    environment:
+      - NODE_ENV=development
+      - DYNAMODB_LOCAL_ENDPOINT=http://dynamodb-local:8000
+      - REDIS_ENDPOINT=redis://redis:6379
+      - LINKS_TABLE_NAME=LinkShortener-Links-dev
+      - ANALYTICS_TABLE_NAME=LinkShortener-Analytics-dev
+    depends_on:
+      dynamodb-local:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - linkshortener-network
+    command: ["npm", "run", "dev"]
+
+networks:
+  linkshortener-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+    driver: local
