@@ -10,7 +10,7 @@ interface CdnStackProps extends cdk.StackProps {
   environment: string;
   config: any;
   restApi: apigateway.RestApi;
-  customDomain?: route53.IHostedZone;
+  customDomain?: apigateway.DomainName;
 }
 
 export class CdnStack extends cdk.Stack {
@@ -66,7 +66,6 @@ export class CdnStack extends cdk.Stack {
             'Referer',
             'Accept',
             'Accept-Language',
-            'Authorization',
             'CloudFront-Viewer-Country',
             'CloudFront-Viewer-Country-Region',
             'CloudFront-Viewer-City'
@@ -96,8 +95,10 @@ export class CdnStack extends cdk.Stack {
           },
           
           customHeadersBehavior: {
-            'X-Service': { value: 'LinkShortener', override: true },
-            'X-Environment': { value: environment, override: true },
+            customHeaders: [
+              { header: 'X-Service', value: 'LinkShortener', override: true },
+              { header: 'X-Environment', value: environment, override: true },
+            ],
           },
         }),
         
@@ -125,9 +126,8 @@ export class CdnStack extends cdk.Stack {
       },
       
       // Geographic restrictions (if needed)
-      geoRestriction: environment === 'prod' 
-        ? cloudfront.GeoRestriction.denylist() // Can add specific countries to block
-        : cloudfront.GeoRestriction.allowlist(), // Allow all for dev
+      // Geographic restrictions (disabled by default)
+      // geoRestriction: cloudfront.GeoRestriction.denylist('CN', 'RU'), // Example blocking
       
       // HTTP versions
       httpVersion: cloudfront.HttpVersion.HTTP2,
@@ -173,16 +173,8 @@ export class CdnStack extends cdk.Stack {
         : undefined,
     });
 
-    // Create Route53 alias record if custom domain is provided
-    if (customDomain && config.domainName) {
-      new route53.ARecord(this, 'AliasRecord', {
-        zone: customDomain,
-        recordName: config.domainName.split('.')[0], // Extract subdomain
-        target: route53.RecordTarget.fromAlias(
-          new targets.CloudFrontTarget(this.distribution)
-        ),
-      });
-    }
+    // Note: Route53 alias record creation should be handled separately
+    // if custom domain setup is needed
 
     // Outputs
     new cdk.CfnOutput(this, 'DistributionId', {

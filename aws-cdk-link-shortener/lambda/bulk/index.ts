@@ -208,15 +208,15 @@ async function handleBulkCreate(
 
     // Send URLs to SQS for processing
     const messages = request.urls.map((urlData, index) => ({
-      id: `${jobId}-${index}`,
-      messageBody: JSON.stringify({
+      Id: `${jobId}-${index}`,
+      MessageBody: JSON.stringify({
         jobId,
         userId,
         index,
         ...urlData,
       }),
-      messageGroupId: jobId, // For FIFO queues
-      messageDeduplicationId: `${jobId}-${index}-${Date.now()}`,
+      MessageGroupId: jobId, // For FIFO queues
+      MessageDeduplicationId: `${jobId}-${index}-${Date.now()}`,
     }));
 
     // Send messages in batches of 10 (SQS limit)

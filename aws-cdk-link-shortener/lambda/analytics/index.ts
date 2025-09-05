@@ -144,7 +144,7 @@ export const handler = async (
       shortCode,
       responseTime: Date.now() - startTime,
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     }));
 
     return createErrorResponse(500, 'Internal server error');

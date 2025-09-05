@@ -9,6 +9,7 @@ const mockDynamoDBClient = DynamoDBClient as jest.MockedClass<typeof DynamoDBCli
 const mockSend = jest.fn();
 
 beforeEach(() => {
+  jest.clearAllMocks();
   mockDynamoDBClient.mockImplementation(() => ({
     send: mockSend,
   } as any));
@@ -19,6 +20,8 @@ describe('Redirect Handler', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Mock successful DynamoDB responses by default
+    mockSend.mockResolvedValue({});
   });
 
   describe('Successful redirects', () => {
@@ -41,11 +44,11 @@ describe('Redirect Handler', () => {
         pathParameters: { shortCode: 'abc123' },
       });
 
-      const result = await handler(event, mockContext);
+      const result = await handler(event);
 
       expect(result.statusCode).toBe(301);
-      expect(result.headers.Location).toBe('https://example.com');
-      expect(result.headers['Cache-Control']).toBe('public, max-age=300');
+      expect(result.headers?.Location).toBe('https://example.com');
+      expect(result.headers?.['Cache-Control']).toBe('public, max-age=300');
     });
 
     it('should include response time in headers', async () => {
@@ -53,10 +56,10 @@ describe('Redirect Handler', () => {
         pathParameters: { shortCode: 'abc123' },
       });
 
-      const result = await handler(event, mockContext);
+      const result = await handler(event);
 
-      expect(result.headers['X-Response-Time']).toMatch(/\d+ms/);
-      expect(result.headers['X-Short-Code']).toBe('abc123');
+      expect(result.headers?.['X-Response-Time']).toMatch(/\d+ms/);
+      expect(result.headers?.['X-Short-Code']).toBe('abc123');
     });
 
     it('should track analytics asynchronously', async () => {
@@ -75,7 +78,7 @@ describe('Redirect Handler', () => {
         },
       });
 
-      await handler(event, mockContext);
+      await handler(event);
 
       // Check that analytics was tracked (PutItem call)
       expect(mockSend).toHaveBeenCalledWith(
@@ -92,7 +95,7 @@ describe('Redirect Handler', () => {
         pathParameters: { shortCode: 'abc123' },
       });
 
-      await handler(event, mockContext);
+      await handler(event);
 
       // Check that click count was updated (UpdateItem call)
       expect(mockSend).toHaveBeenCalledWith(
@@ -118,10 +121,10 @@ describe('Redirect Handler', () => {
         pathParameters: { shortCode: 'nonexistent' },
       });
 
-      const result = await handler(event, mockContext);
+      const result = await handler(event);
 
       expect(result.statusCode).toBe(404);
-      expect(result.headers['Content-Type']).toBe('text/html; charset=utf-8');
+      expect(result.headers?.['Content-Type']).toBe('text/html; charset=utf-8');
       expect(result.body).toContain('Link Not Found');
       expect(result.body).toContain('nonexistent');
     });
@@ -131,7 +134,7 @@ describe('Redirect Handler', () => {
         pathParameters: { shortCode: 'notfound' },
       });
 
-      await handler(event, mockContext);
+      await handler(event);
 
       // Check that NOT_FOUND event was tracked
       expect(mockSend).toHaveBeenCalledWith(
@@ -151,9 +154,9 @@ describe('Redirect Handler', () => {
         pathParameters: { shortCode: 'notfound' },
       });
 
-      const result = await handler(event, mockContext);
+      const result = await handler(event);
 
-      expect(result.headers['Cache-Control']).toBe('no-cache, no-store, must-revalidate');
+      expect(result.headers?.['Cache-Control']).toBe('no-cache, no-store, must-revalidate');
     });
   });
 
@@ -176,10 +179,10 @@ describe('Redirect Handler', () => {
         pathParameters: { shortCode: 'expired123' },
       });
 
-      const result = await handler(event, mockContext);
+      const result = await handler(event);
 
       expect(result.statusCode).toBe(410);
-      expect(result.headers['Content-Type']).toBe('text/html; charset=utf-8');
+      expect(result.headers?.['Content-Type']).toBe('text/html; charset=utf-8');
       expect(result.body).toContain('Link Expired');
     });
 
@@ -188,7 +191,7 @@ describe('Redirect Handler', () => {
         pathParameters: { shortCode: 'expired123' },
       });
 
-      await handler(event, mockContext);
+      await handler(event);
 
       // Check that EXPIRED event was tracked
       expect(mockSend).toHaveBeenCalledWith(
@@ -209,7 +212,7 @@ describe('Redirect Handler', () => {
         pathParameters: null,
       });
 
-      const result = await handler(event, mockContext);
+      const result = await handler(event);
 
       expect(result.statusCode).toBe(400);
       expect(JSON.parse(result.body).error.message).toContain('required');
@@ -220,7 +223,7 @@ describe('Redirect Handler', () => {
         pathParameters: { shortCode: '' },
       });
 
-      const result = await handler(event, mockContext);
+      const result = await handler(event);
 
       expect(result.statusCode).toBe(400);
     });
@@ -234,7 +237,7 @@ describe('Redirect Handler', () => {
         pathParameters: { shortCode: 'abc123' },
       });
 
-      const result = await handler(event, mockContext);
+      const result = await handler(event);
 
       expect(result.statusCode).toBe(500);
       expect(JSON.parse(result.body).error.message).toBe('Internal server error');
@@ -256,11 +259,11 @@ describe('Redirect Handler', () => {
         pathParameters: { shortCode: 'abc123' },
       });
 
-      const result = await handler(event, mockContext);
+      const result = await handler(event);
 
       // Should still redirect successfully
       expect(result.statusCode).toBe(301);
-      expect(result.headers.Location).toBe('https://example.com');
+      expect(result.headers?.Location).toBe('https://example.com');
     });
 
     it('should not fail redirect if click count update fails', async () => {
@@ -279,11 +282,11 @@ describe('Redirect Handler', () => {
         pathParameters: { shortCode: 'abc123' },
       });
 
-      const result = await handler(event, mockContext);
+      const result = await handler(event);
 
       // Should still redirect successfully
       expect(result.statusCode).toBe(301);
-      expect(result.headers.Location).toBe('https://example.com');
+      expect(result.headers?.Location).toBe('https://example.com');
     });
   });
 
@@ -309,7 +312,7 @@ describe('Redirect Handler', () => {
         },
       });
 
-      await handler(event, mockContext);
+      await handler(event);
 
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -330,7 +333,7 @@ describe('Redirect Handler', () => {
         },
       });
 
-      await handler(event, mockContext);
+      await handler(event);
 
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -355,7 +358,7 @@ describe('Redirect Handler', () => {
         },
       });
 
-      await handler(event, mockContext);
+      await handler(event);
 
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -389,7 +392,7 @@ describe('Redirect Handler', () => {
         pathParameters: { shortCode: 'abc123' },
       });
 
-      await handler(event, mockContext);
+      await handler(event);
 
       expect(consoleSpy).toHaveBeenCalledWith(
         expect.stringContaining('"action":"redirect"')

@@ -36,8 +36,8 @@ interface LinkItem {
 }
 
 // Track cold starts for monitoring
-const COLD_START = !global.isWarm;
-global.isWarm = true;
+const COLD_START = !(global as any).isWarm;
+(global as any).isWarm = true;
 
 export const handler = async (
   event: APIGatewayProxyEvent
@@ -147,7 +147,7 @@ export const handler = async (
       responseTime: Date.now() - startTime,
       coldStart: COLD_START,
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     }));
     
     return createErrorResponse(500, 'Internal server error');

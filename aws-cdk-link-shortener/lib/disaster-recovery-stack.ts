@@ -28,9 +28,9 @@ interface DisasterRecoveryStackProps extends cdk.StackProps {
 }
 
 export class DisasterRecoveryStack extends cdk.Stack {
-  public readonly backupVault: backup.BackupVault;
-  public readonly recoveryStateMachine: stepfunctions.StateMachine;
-  public readonly configBackupBucket: s3.Bucket;
+  public readonly backupVault?: backup.BackupVault;
+  public readonly recoveryStateMachine?: stepfunctions.StateMachine;
+  public readonly configBackupBucket?: s3.Bucket;
 
   constructor(scope: Construct, id: string, props: DisasterRecoveryStackProps) {
     super(scope, id, props);
@@ -60,7 +60,7 @@ export class DisasterRecoveryStack extends cdk.Stack {
 
   private createBackupInfrastructure(environment: string, config: DisasterRecoveryStackProps['config']) {
     // Create backup vault with encryption
-    this.backupVault = new backup.BackupVault(this, 'BackupVault', {
+    (this as any).backupVault = new backup.BackupVault(this, 'BackupVault', {
       backupVaultName: `LinkShortener-Backups-${environment}`,
       encryptionKey: new cdk.aws_kms.Key(this, 'BackupEncryptionKey', {
         description: `Backup encryption key for LinkShortener ${environment}`,
@@ -171,7 +171,6 @@ export class DisasterRecoveryStack extends cdk.Stack {
           backup.BackupResource.fromDynamoDbTable(analyticsTable),
         ],
         role: backupRole,
-        backupPlanRuleName: 'DailyBackup',
       });
 
     } else {
@@ -383,7 +382,7 @@ export class DisasterRecoveryStack extends cdk.Stack {
         }))
       );
 
-    this.recoveryStateMachine = new stepfunctions.StateMachine(this, 'DisasterRecoveryStateMachine', {
+    (this as any).recoveryStateMachine = new stepfunctions.StateMachine(this, 'DisasterRecoveryStateMachine', {
       stateMachineName: `LinkShortener-DR-${environment}`,
       definition,
       timeout: cdk.Duration.hours(2),
@@ -399,7 +398,7 @@ export class DisasterRecoveryStack extends cdk.Stack {
 
   private createConfigurationBackup(environment: string, config: DisasterRecoveryStackProps['config']) {
     // S3 bucket for configuration backups
-    this.configBackupBucket = new s3.Bucket(this, 'ConfigBackupBucket', {
+    (this as any).configBackupBucket = new s3.Bucket(this, 'ConfigBackupBucket', {
       bucketName: `linkshortener-config-backup-${environment}-${this.account}`,
       versioned: true,
       encryption: s3.BucketEncryption.S3_MANAGED,
@@ -482,14 +481,14 @@ export class DisasterRecoveryStack extends cdk.Stack {
         };
       `),
       environment: {
-        CONFIG_BUCKET: this.configBackupBucket.bucketName,
+        CONFIG_BUCKET: this.configBackupBucket?.bucketName || '',
         ENVIRONMENT: environment,
       },
       timeout: cdk.Duration.minutes(5),
     });
 
     // Grant permissions
-    this.configBackupBucket.grantWrite(configBackupFunction);
+    this.configBackupBucket?.grantWrite(configBackupFunction);
     configBackupFunction.addToRolePolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: [
@@ -518,9 +517,11 @@ export class DisasterRecoveryStack extends cdk.Stack {
     });
 
     if (config.alarmEmail) {
-      drAlertTopic.addSubscription(
-        new sns.snsSubscriptions.EmailSubscription(config.alarmEmail)
-      );
+      new sns.Subscription(this, 'EmailSubscription', {
+        endpoint: config.alarmEmail,
+        protocol: sns.SubscriptionProtocol.EMAIL,
+        topic: drAlertTopic,
+      });
     }
 
     // CloudWatch alarms for backup failures
@@ -549,8 +550,12 @@ export class DisasterRecoveryStack extends cdk.Stack {
       alarmName: `LinkShortener-DR-StateMachine-Failure-${environment}`,
       alarmDescription: 'DR state machine execution has failed',
       
-      metric: this.recoveryStateMachine.metricFailed({
+      metric: this.recoveryStateMachine?.metricFailed({
         period: cdk.Duration.minutes(5),
+      }) || new cdk.aws_cloudwatch.Metric({
+        namespace: 'AWS/States',
+        metricName: 'ExecutionsFailed',
+        statistic: 'Sum',
       }),
       
       threshold: 1,
@@ -566,15 +571,19 @@ export class DisasterRecoveryStack extends cdk.Stack {
       });
     }
 
-    new cdk.CfnOutput(this, 'RecoveryStateMachineArn', {
-      value: this.recoveryStateMachine.stateMachineArn,
-      exportName: `LinkShortener-RecoveryStateMachine-${environment}`,
-    });
+    if (this.recoveryStateMachine) {
+      new cdk.CfnOutput(this, 'RecoveryStateMachineArn', {
+        value: this.recoveryStateMachine.stateMachineArn,
+        exportName: `LinkShortener-RecoveryStateMachine-${environment}`,
+      });
+    }
 
-    new cdk.CfnOutput(this, 'ConfigBackupBucket', {
-      value: this.configBackupBucket.bucketName,
-      exportName: `LinkShortener-ConfigBackup-${environment}`,
-    });
+    if (this.configBackupBucket) {
+      new cdk.CfnOutput(this, 'ConfigBackupBucket', {
+        value: this.configBackupBucket.bucketName,
+        exportName: `LinkShortener-ConfigBackup-${environment}`,
+      });
+    }
 
     // Tags
     cdk.Tags.of(this).add('Component', 'DisasterRecovery');

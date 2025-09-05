@@ -10,6 +10,7 @@ const mockDynamoDBClient = DynamoDBClient as jest.MockedClass<typeof DynamoDBCli
 const mockSend = jest.fn();
 
 beforeEach(() => {
+  jest.clearAllMocks();
   mockDynamoDBClient.mockImplementation(() => ({
     send: mockSend,
   } as any));
@@ -27,19 +28,35 @@ describe('Create Handler', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Mock successful DynamoDB responses by default
+    mockSend.mockResolvedValue({});
   });
 
   describe('Successful URL creation', () => {
     beforeEach(() => {
       // Mock successful DynamoDB responses
-      mockSend
-        .mockResolvedValueOnce({ Items: [] }) // Query for existing URL (none found)
-        .mockResolvedValueOnce({ Item: null }) // Check short code exists (doesn't exist)
-        .mockResolvedValueOnce({}); // Put item success
+      mockSend.mockImplementation((command) => {
+        console.log('Mock called with:', command.constructor.name);
+        if (command.constructor.name === 'QueryCommand') {
+          return Promise.resolve({ Items: [] }); // No existing URL found
+        }
+        if (command.constructor.name === 'GetItemCommand') {
+          return Promise.resolve({ Item: null }); // Short code doesn't exist
+        }
+        if (command.constructor.name === 'PutItemCommand') {
+          return Promise.resolve({}); // Success
+        }
+        return Promise.resolve({});
+      });
     });
 
     it('should create a short URL successfully', async () => {
-      const result = await handler(mockEvent, mockContext);
+      console.log('Starting test...');
+      console.log('Mock send calls:', mockSend.mock.calls.length);
+      
+      const result = await handler(mockEvent);
+      
+      console.log('Result:', result);
 
       expect(result.statusCode).toBe(201);
       expect(JSON.parse(result.body)).toMatchObject({
@@ -64,8 +81,8 @@ describe('Create Handler', () => {
         body: JSON.stringify({ url: 'https://example2.com' }),
       });
 
-      const result1 = await handler(event1, mockContext);
-      const result2 = await handler(event2, mockContext);
+      const result1 = await handler(event1);
+      const result2 = await handler(event2);
 
       const data1 = JSON.parse(result1.body).data;
       const data2 = JSON.parse(result2.body).data;
@@ -93,7 +110,7 @@ describe('Create Handler', () => {
         .mockResolvedValueOnce({ Item: null }) // Check custom code doesn't exist
         .mockResolvedValueOnce({}); // Put item success
 
-      const result = await handler(customEvent, mockContext);
+      const result = await handler(customEvent);
 
       expect(result.statusCode).toBe(201);
       expect(JSON.parse(result.body).data.shortCode).toBe('my-custom-code');
@@ -108,7 +125,7 @@ describe('Create Handler', () => {
         }),
       });
 
-      const result = await handler(invalidEvent, mockContext);
+      const result = await handler(invalidEvent);
 
       expect(result.statusCode).toBe(400);
       expect(JSON.parse(result.body).success).toBe(false);
@@ -128,7 +145,7 @@ describe('Create Handler', () => {
         .mockResolvedValueOnce({ Items: [] }) // Query for existing URL
         .mockResolvedValueOnce({ Item: { shortCode: 'existing-code' } }); // Check custom code exists
 
-      const result = await handler(customEvent, mockContext);
+      const result = await handler(customEvent);
 
       expect(result.statusCode).toBe(409);
       expect(JSON.parse(result.body).error.message).toContain('already exists');
@@ -144,7 +161,7 @@ describe('Create Handler', () => {
         }),
       });
 
-      const result = await handler(invalidEvent, mockContext);
+      const result = await handler(invalidEvent);
 
       expect(result.statusCode).toBe(400);
       expect(JSON.parse(result.body).success).toBe(false);
@@ -156,7 +173,7 @@ describe('Create Handler', () => {
         body: JSON.stringify({}),
       });
 
-      const result = await handler(missingUrlEvent, mockContext);
+      const result = await handler(missingUrlEvent);
 
       expect(result.statusCode).toBe(400);
       expect(JSON.parse(result.body).success).toBe(false);
@@ -169,7 +186,7 @@ describe('Create Handler', () => {
         body: JSON.stringify({ url: longUrl }),
       });
 
-      const result = await handler(longUrlEvent, mockContext);
+      const result = await handler(longUrlEvent);
 
       expect(result.statusCode).toBe(400);
       expect(JSON.parse(result.body).success).toBe(false);
@@ -181,7 +198,7 @@ describe('Create Handler', () => {
         body: null,
       });
 
-      const result = await handler(noBodyEvent, mockContext);
+      const result = await handler(noBodyEvent);
 
       expect(result.statusCode).toBe(400);
       expect(JSON.parse(result.body).error.message).toContain('required');
@@ -203,7 +220,7 @@ describe('Create Handler', () => {
         .mockResolvedValueOnce({ Item: null })
         .mockResolvedValueOnce({});
 
-      const result = await handler(expirationEvent, mockContext);
+      const result = await handler(expirationEvent);
 
       expect(result.statusCode).toBe(201);
       expect(JSON.parse(result.body).data.expiresAt).toBeTruthy();
@@ -218,7 +235,7 @@ describe('Create Handler', () => {
         }),
       });
 
-      const result = await handler(shortExpirationEvent, mockContext);
+      const result = await handler(shortExpirationEvent);
 
       expect(result.statusCode).toBe(400);
       expect(JSON.parse(result.body).success).toBe(false);
@@ -229,7 +246,7 @@ describe('Create Handler', () => {
     it('should handle DynamoDB errors gracefully', async () => {
       mockSend.mockRejectedValueOnce(new Error('DynamoDB error'));
 
-      const result = await handler(mockEvent, mockContext);
+      const result = await handler(mockEvent);
 
       expect(result.statusCode).toBe(500);
       expect(JSON.parse(result.body).success).toBe(false);
@@ -241,7 +258,7 @@ describe('Create Handler', () => {
         body: 'invalid json',
       });
 
-      const result = await handler(malformedEvent, mockContext);
+      const result = await handler(malformedEvent);
 
       expect(result.statusCode).toBe(400);
       expect(JSON.parse(result.body).success).toBe(false);
@@ -262,7 +279,7 @@ describe('Create Handler', () => {
         Items: [existingItem],
       });
 
-      const result = await handler(mockEvent, mockContext);
+      const result = await handler(mockEvent);
 
       expect(result.statusCode).toBe(201);
       expect(JSON.parse(result.body)).toMatchObject({
@@ -283,7 +300,7 @@ describe('Create Handler', () => {
         .mockResolvedValueOnce({ Item: null })
         .mockResolvedValueOnce({});
 
-      const result = await handler(mockEvent, mockContext);
+      const result = await handler(mockEvent);
 
       expect(result.headers).toMatchObject({
         'Access-Control-Allow-Origin': '*',

@@ -49,6 +49,7 @@ function createAPIGatewayEvent(req: express.Request, pathParameters: any = {}): 
         apiKey: null,
         apiKeyId: null,
         caller: null,
+        clientCert: null,
         cognitoAuthenticationProvider: null,
         cognitoAuthenticationType: null,
         cognitoIdentityId: null,
@@ -102,12 +103,13 @@ async function handleLambdaResponse(
     // Send response
     if (result.statusCode >= 300 && result.statusCode < 400 && result.headers?.Location) {
       // Handle redirects
-      res.redirect(result.statusCode, result.headers.Location);
+      res.redirect(result.statusCode, String(result.headers.Location));
     } else {
       res.status(result.statusCode);
       if (result.body) {
         // Check if response is JSON
-        if (result.headers?.['Content-Type']?.includes('application/json')) {
+        const contentType = result.headers?.['Content-Type'];
+        if (contentType && typeof contentType === 'string' && contentType.includes('application/json')) {
           res.json(JSON.parse(result.body));
         } else {
           res.send(result.body);
@@ -143,7 +145,7 @@ app.get('/api/health', (req, res) => {
 // Create short link - POST /api/shorten
 app.post('/api/shorten', async (req, res) => {
   const event = createAPIGatewayEvent(req);
-  await handleLambdaResponse(res, createHandler, event);
+  return await handleLambdaResponse(res, createHandler, event);
 });
 
 // Get analytics - GET /api/analytics/:shortCode
@@ -151,7 +153,7 @@ app.get('/api/analytics/:shortCode', async (req, res) => {
   const event = createAPIGatewayEvent(req, {
     shortCode: req.params.shortCode,
   });
-  await handleLambdaResponse(res, analyticsHandler, event);
+  return await handleLambdaResponse(res, analyticsHandler, event);
 });
 
 // Redirect - GET /:shortCode
@@ -165,7 +167,7 @@ app.get('/:shortCode', async (req, res) => {
   const event = createAPIGatewayEvent(req, {
     shortCode: req.params.shortCode,
   });
-  await handleLambdaResponse(res, redirectHandler, event);
+  return await handleLambdaResponse(res, redirectHandler, event);
 });
 
 // Static homepage for development
@@ -328,7 +330,7 @@ app.get('/', (req, res) => {
 });
 
 // Error handling middleware
-app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((error: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Express error:', error);
   res.status(500).json({
     success: false,

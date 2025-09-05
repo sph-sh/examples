@@ -196,10 +196,10 @@ async function createAnalyticsTable(): Promise<void> {
         },
       },
     ],
-    TimeToLiveSpecification: {
-      AttributeName: 'expiresAt',
-      Enabled: true,
-    },
+    // TimeToLiveSpecification: {
+    //   AttributeName: 'expiresAt',
+    //   Enabled: true,
+    // },
     Tags: [
       {
         Key: 'Environment',
@@ -287,7 +287,7 @@ async function populateTestData(): Promise<void> {
       }));
       console.log(`  ✅ Added test link: ${link.shortCode}`);
     } catch (error) {
-      console.warn(`  ⚠️  Failed to add test link ${link.shortCode}:`, error.message);
+      console.warn(`  ⚠️  Failed to add test link ${link.shortCode}:`, error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -333,7 +333,7 @@ async function populateTestData(): Promise<void> {
       }));
       console.log(`  ✅ Added analytics for: ${analytics.shortCode}`);
     } catch (error) {
-      console.warn(`  ⚠️  Failed to add analytics for ${analytics.shortCode}:`, error.message);
+      console.warn(`  ⚠️  Failed to add analytics for ${analytics.shortCode}:`, error instanceof Error ? error.message : String(error));
     }
   }
 }

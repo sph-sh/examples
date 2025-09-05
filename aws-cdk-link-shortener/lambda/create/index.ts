@@ -159,7 +159,7 @@ export const handler = async (
       return createErrorResponse(400, error.errors[0].message);
     }
     
-    if (error.name === 'ConditionalCheckFailedException') {
+    if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
       return createErrorResponse(409, 'Short code already exists');
     }
 

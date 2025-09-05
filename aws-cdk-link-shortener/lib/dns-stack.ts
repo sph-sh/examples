@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as route53 from 'aws-cdk-lib/aws-route53';
+import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import { Construct } from 'constructs';
@@ -64,11 +65,8 @@ export class DnsStack extends cdk.Stack {
       zone: this.hostedZone,
       recordName: this.extractSubdomain(config.domainName),
       target: route53.RecordTarget.fromAlias(
-        new route53.targets.ApiGatewayDomain(this.customDomain)
+        new targets.ApiGatewayDomain(this.customDomain)
       ),
-      
-      // TTL for DNS caching
-      ttl: cdk.Duration.minutes(5),
     });
 
     // Create AAAA record for IPv6 support
@@ -76,25 +74,20 @@ export class DnsStack extends cdk.Stack {
       zone: this.hostedZone,
       recordName: this.extractSubdomain(config.domainName),
       target: route53.RecordTarget.fromAlias(
-        new route53.targets.ApiGatewayDomain(this.customDomain)
+        new targets.ApiGatewayDomain(this.customDomain)
       ),
     });
 
     // Create health check for monitoring
     if (environment === 'prod') {
       const healthCheck = new route53.CfnHealthCheck(this, 'HealthCheck', {
-        name: `LinkShortener-HealthCheck-${environment}`,
-        type: 'HTTPS',
-        resourcePath: '/api/health',
-        fullyQualifiedDomainName: config.domainName,
-        port: 443,
-        requestInterval: 30, // Check every 30 seconds
-        failureThreshold: 3, // Fail after 3 consecutive failures
-        
-        // CloudWatch alarm integration
-        alarmIdentifier: {
-          name: `LinkShortener-HealthAlarm-${environment}`,
-          region: this.region,
+        healthCheckConfig: {
+          type: 'HTTPS',
+          resourcePath: '/api/health',
+          fullyQualifiedDomainName: config.domainName,
+          port: 443,
+          requestInterval: 30, // Check every 30 seconds
+          failureThreshold: 3, // Fail after 3 consecutive failures
         },
         
         // Tags

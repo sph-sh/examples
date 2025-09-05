@@ -35,14 +35,13 @@ export class LambdaStack extends cdk.Stack {
     const commonEnvVars = {
       LINKS_TABLE_NAME: linksTable.tableName,
       ANALYTICS_TABLE_NAME: analyticsTable.tableName,
-      AWS_REGION: this.region,
       ENVIRONMENT: environment,
       CUSTOM_DOMAIN: config.domainName,
       IP_SALT: 'change-this-in-production-' + environment,
     };
 
     // Common Lambda function configuration
-    const commonLambdaProps: Partial<lambda.FunctionProps> = {
+    const commonLambdaProps = {
       runtime: lambda.Runtime.NODEJS_18_X,
       architecture: lambda.Architecture.ARM_64, // 20% cost reduction
       layers: [this.sharedLayer],
@@ -163,22 +162,14 @@ export class LambdaStack extends cdk.Stack {
     // Create Lambda aliases for blue/green deployments
     if (environment === 'prod') {
       const createAlias = this.createHandler.addAlias('live', {
-        version: this.createHandler.currentVersion,
         description: 'Live version of create handler',
       });
 
       const redirectAlias = this.redirectHandler.addAlias('live', {
-        version: this.redirectHandler.currentVersion,
         description: 'Live version of redirect handler',
-        
-        // Enable provisioned concurrency for consistent performance
-        provisionedConcurrencyConfig: {
-          provisionedConcurrentExecutions: 10,
-        },
       });
 
       const analyticsAlias = this.analyticsHandler.addAlias('live', {
-        version: this.analyticsHandler.currentVersion,
         description: 'Live version of analytics handler',
       });
     }

@@ -118,22 +118,14 @@ export class DomainStack extends cdk.Stack {
     // Health check for monitoring
     if (environment === 'prod') {
       const healthCheck = new route53.CfnHealthCheck(this, 'HealthCheck', {
-        type: 'HTTPS',
-        fullyQualifiedDomainName: `api.${config.domainName}`,
-        resourcePath: '/api/health',
-        port: 443,
-        requestInterval: 30,
-        failureThreshold: 3,
-        tags: [
-          {
-            key: 'Name',
-            value: `LinkShortener-${environment}-HealthCheck`,
-          },
-          {
-            key: 'Environment',
-            value: environment,
-          },
-        ],
+        healthCheckConfig: {
+          type: 'HTTPS',
+          fullyQualifiedDomainName: `api.${config.domainName}`,
+          resourcePath: '/api/health',
+          port: 443,
+          requestInterval: 30,
+          failureThreshold: 3,
+        },
       });
 
       // CloudWatch alarm for health check failures

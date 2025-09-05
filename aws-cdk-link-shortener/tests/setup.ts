@@ -37,7 +37,10 @@ global.console = {
   ...originalConsole,
   log: jest.fn(),
   warn: jest.fn(),
-  error: jest.fn(),
+  error: jest.fn().mockImplementation((...args) => {
+    // Allow error logs to pass through for debugging
+    originalConsole.error(...args);
+  }),
   info: jest.fn(),
   debug: jest.fn(),
 };

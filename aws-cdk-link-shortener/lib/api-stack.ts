@@ -1,8 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as logs from 'aws-cdk-lib/aws-logs';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 
 interface ApiStackProps extends cdk.StackProps {
@@ -28,7 +26,7 @@ export class ApiStack extends cdk.Stack {
       description: `Production link shortener API for ${environment} environment`,
       
       // Performance optimizations
-      minimumCompressionSize: 1024, // Compress responses > 1KB
+      minCompressionSize: cdk.Size.kibibytes(1), // Compress responses > 1KB
       binaryMediaTypes: ['*/*'], // Support all binary types
       
       // CORS configuration for web clients
@@ -71,40 +69,14 @@ export class ApiStack extends cdk.Stack {
         throttlingRateLimit: 1000,
         
         // Caching configuration for GET requests
-        cachingEnabled: true,
+        cachingEnabled: environment === 'prod',
         cacheClusterEnabled: environment === 'prod',
         cacheClusterSize: environment === 'prod' ? '0.5' : undefined,
         cacheTtl: cdk.Duration.minutes(5),
-        cacheKeyParameters: ['method.request.path.shortCode'],
       },
 
       // CloudWatch logs
       cloudWatchRole: true,
-      accessLogDestination: new apigateway.LogGroupLogDestination(
-        new logs.LogGroup(this, 'ApiAccessLogs', {
-          logGroupName: `/aws/apigateway/LinkShortener-${environment}`,
-          retention: environment === 'prod' 
-            ? logs.RetentionDays.ONE_MONTH 
-            : logs.RetentionDays.ONE_WEEK,
-          removalPolicy: environment === 'prod' 
-            ? cdk.RemovalPolicy.RETAIN 
-            : cdk.RemovalPolicy.DESTROY,
-        })
-      ),
-      accessLogFormat: apigateway.AccessLogFormat.jsonWithStandardFields({
-        caller: true,
-        httpMethod: true,
-        ip: true,
-        protocol: true,
-        requestTime: true,
-        resourcePath: true,
-        responseLength: true,
-        status: true,
-        user: true,
-        requestId: true,
-        extendedRequestId: true,
-        xrayTraceId: true,
-      }),
 
       // Enable API key for additional security if needed
       apiKeySourceType: apigateway.ApiKeySourceType.HEADER,
@@ -242,8 +214,6 @@ export class ApiStack extends cdk.Stack {
       requestParameters: {
         'method.request.path.shortCode': true,
       },
-      cacheKeyParameters: ['method.request.path.shortCode'],
-      cachingEnabled: true,
       methodResponses: [
         {
           statusCode: '301',

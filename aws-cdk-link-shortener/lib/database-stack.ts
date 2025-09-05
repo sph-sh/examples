@@ -23,17 +23,10 @@ export class DatabaseStack extends cdk.Stack {
         name: 'shortCode',
         type: dynamodb.AttributeType.STRING,
       },
-      billingMode: dynamodb.BillingMode.ON_DEMAND, // Better for unpredictable traffic
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST, // Better for unpredictable traffic
       
       // Enable point-in-time recovery for production
       pointInTimeRecovery: environment === 'prod',
-      
-      // Backup configuration
-      ...(environment === 'prod' && {
-        backupTable: {
-          backup: dynamodb.BackupProps.daily(),
-        },
-      }),
 
       // Encryption at rest
       encryption: dynamodb.TableEncryption.AWS_MANAGED,
@@ -81,7 +74,7 @@ export class DatabaseStack extends cdk.Stack {
         name: 'timestamp',
         type: dynamodb.AttributeType.NUMBER,
       },
-      billingMode: dynamodb.BillingMode.ON_DEMAND,
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       
       // TTL for automatic cleanup of old analytics data
       timeToLiveAttribute: 'expiresAt',
