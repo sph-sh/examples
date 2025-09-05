@@ -38,8 +38,8 @@ This is the complete, production-ready link shortener service built with AWS CDK
 ### Installation
 
 ```bash
-git clone <this-repo>
-cd aws-cdk-link-shortener
+git clone https://github.com/sph-sh/examples.git
+cd examples/aws-cdk-link-shortener
 npm install
 ```
 
@@ -382,5 +382,5 @@ Each post includes real production stories, performance insights, and lessons le
 
 For questions and support:
 - 📧 Email: contact@sph.sh
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/aws-cdk-link-shortener/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/yourusername/aws-cdk-link-shortener/discussions)
+- 🐛 Issues: [GitHub Issues](https://github.com/sph-sh/examples/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/sph-sh/examples/discussions)

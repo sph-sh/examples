@@ -79,10 +79,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/aws-cdk-link-shortener.git"
+    "url": "https://github.com/sph-sh/examples.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/aws-cdk-link-shortener/issues"
+    "url": "https://github.com/sph-sh/examples/issues"
   },
   "homepage": "https://sph.sh/en/series/aws-cdk-link-shortener"
 }
